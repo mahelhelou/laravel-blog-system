@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Models\Article;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -9,76 +10,67 @@ use Illuminate\Support\Facades\Auth;
 
 class ArticleController extends Controller
 {
-    // Show all articles
     public function index()
     {
-        $articles = DB::table('articles')->join('users', 'articles.user_id', '=', 'users.id')->select('articles.id', 'articles.title', 'articles.content', 'users.name as author', 'articles.created_at')->get();
-
-        return response()->json($articles);
+        $articles = Article::with('user')->orderBy('id', 'desc')->paginate(10);
+        return view('articles.index', compact('articles'));
     }
 
-    // Create a new article
-    public function insert(Request $request)
+    // GET /articles/create
+    public function create()
+    {
+        $users = User::orderBy('name')->get();
+        return view('articles.create', compact('users'));
+    }
+
+    // POST /articles
+    public function store(Request $request)
     {
         $request->validate([
-            'title' => 'required|string|max:255',
-            'content' => 'required'
+            'title'   => 'required|string|max:255',
+            'content' => 'required',
+            'user_id' => 'required|exists:users,id',
         ]);
 
-        $userId = Auth::id();
-        if (!$userId && !$request->filled('user_id')) {
-            return response()->json(['error' => 'User not authenticated or provided'], 401);
-        }
-
-        $article = Article::create([
-            'title' => $request->title,
-            'content' => $request->content,
-            'user_id' => $userId ?? $request->user_id,
-        ]);
-
-        return response()->json($article, 201);
+        Article::create($request->only(['title','content','user_id']));
+        return redirect()->route('articles.index')->with('success', 'Article created');
     }
 
-    // View single article
+    // GET /articles/{id}
     public function show($id)
     {
-        $article = Article::find($id);
-        if (!$article) {
-            return response()->json(['error' => 'Article not found'], 404);
-
-        }
-
-        return response()->json($article, 201);
+        $article = Article::with('user')->findOrFail($id);
+        return view('articles.show', compact('article'));
     }
 
-    // Update an article
+    // GET /articles/{id}/edit
+    public function edit($id)
+    {
+        $article = Article::findOrFail($id);
+        $users = User::orderBy('name')->get();
+        return view('articles.edit', compact('article', 'users'));
+    }
+
+    // PUT /articles/{id}
     public function update(Request $request, $id)
     {
-        $article = Article::find($id);
-        if (!$article) {
-            return response()->json(['error' => 'Article not found'], 404);
-        }
-
         $request->validate([
-            'title' => 'sometimes|required|string|max:255',
-            'content' => 'sometimes|required'
+            'title'   => 'required|string|max:255',
+            'content' => 'required',
+            'user_id' => 'required|exists:users,id',
         ]);
 
-        $article->update($request->only(['title', 'content']));
+        $article = Article::findOrFail($id);
+        $article->update($request->only(['title','content','user_id']));
 
-        return response()->json($article, 201);
+        return redirect()->route('articles.index')->with('success', 'Article updated');
     }
 
-    // Delete an article
-    public function delete($id)
+    // DELETE /articles/{id}
+    public function destroy($id)
     {
-        $article = Article::find($id);
-        if (!$article) {
-            return response()->json(['error' => 'Article not found'], 404);
-        }
-
+        $article = Article::findOrFail($id);
         $article->delete();
-
-        return response()->json(['message' => 'Article deleted successfully'], 201);
+        return redirect()->route('articles.index')->with('success', 'Article deleted');
     }
 }

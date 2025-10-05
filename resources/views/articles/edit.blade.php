@@ -12,17 +12,17 @@
       @method('PUT')
 
       <div class="mb-3">
-        <label class="form-label">Title</label>
+        <label class="form-label">عنوان المقال</label>
         <input name="title" type="text" class="form-control" value="{{ old('title',$article->title) }}" required>
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Content</label>
+        <label class="form-label">محتوى المقال</label>
         <textarea name="content" rows="6" class="form-control" required>{{ old('content',$article->content) }}</textarea>
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Author (user)</label>
+        <label class="form-label">الكتاتب (اليوزر)</label>
         <select name="user_id" class="form-select" required>
           @foreach($users as $u)
             <option value="{{ $u->id }}" {{ (old('user_id',$article->user_id) == $u->id) ? 'selected' : '' }}>
